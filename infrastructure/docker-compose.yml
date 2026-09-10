@@ -1,0 +1,21 @@
+### Used geek4geeks for base https://www.geeksforgeeks.org/devops/docker-compose/
+version: '3.8'
+
+
+services:
+  financial_db:
+    image: postgres:16-alpine
+    container_name: financial_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: financial_user
+      POSTGRES_PASSWORD: financial_secure_password123
+      POSTGRES_DB: financial_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    driver: local

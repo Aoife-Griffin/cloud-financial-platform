@@ -15,6 +15,11 @@ import com.financialplatform.service.TransactionSpecifications;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.math.BigDecimal;
+import java.util.List;
+import org.springframework.data.jpa.domain.Specification;
+
+
 
 @Service
 public class TransactionService {

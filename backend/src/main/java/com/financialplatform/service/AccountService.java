@@ -27,15 +27,29 @@ public class AccountService {
         this.transactionRepository = transactionRepository;
     }
 
-    public AccountResponse createAccount(AccountRequest request) {
+    public AccountResponse createAccount(Long authenticatedUserId,AccountRequest request) {
         Account account = new Account();
         account.setName(request.name());
         account.setType(request.type().toUpperCase());
         account.setCurrency(request.currency().toUpperCase());
         account.setBalance(BigDecimal.ZERO);
+        account.setUserId(authenticatedUserId);
         
         Account saved = accountRepository.save(account);
         return mapToResponse(saved);
+    }
+
+    /// Adding id
+    public AccountResponse getAccountByIdSecure(Long accountId, Long authenticatedUserId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account resource not found"));
+
+        /// If the authenticated user is the owner of the account
+        if (!account.getUserId().equals(authenticatedUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized resource access denied");
+        }
+
+        return getAccountBalanceDetails(account.getId());
     }
 
     public AccountResponse getAccountBalanceDetails(Long accountId) {
@@ -73,18 +87,27 @@ public class AccountService {
         }
         return accounts.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
-
-    public AccountResponse getAccountById(Long id) {
+    
+    public void deleteAccountSecure(Long id, Long authenticatedUserId) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ID not found: " + id));
-        return getAccountBalanceDetails(id);
+                .orElseThrow(() -> new RuntimeException("Account resource not found"));
+        
+        if (!account.getUserId().equals(authenticatedUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized resource access denied");
+        }
+        accountRepository.deleteById(id);
     }
 
     /// Updates an existing account with new details
-    public AccountResponse updateAccount(Long id, AccountRequest request) {
+    public AccountResponse updateAccountSecure(Long id, Long authenticatedUserId, AccountRequest request) {
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ID not found: " + id));
+                .orElseThrow(() -> new RuntimeException("Account resource not found"));
         
+        /// If the authenticated user is the owner of the account
+        if (!account.getUserId().equals(authenticatedUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized resource access denied");
+        }
+
         account.setName(request.name());
         account.setType(request.type().toUpperCase());
         account.setCurrency(request.currency().toUpperCase());
@@ -92,13 +115,6 @@ public class AccountService {
         /// Save the updated account and return the response
         Account updated = accountRepository.save(account);
         return mapToResponse(updated);
-    }
-
-    public void deleteAccount(Long id) {
-        if (!accountRepository.existsById(id)) {
-            throw new RuntimeException("Account not found with ID: " + id);
-        }
-        accountRepository.deleteById(id);
     }
 
     /// connects account model to account response

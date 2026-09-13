@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+import com.financialplatform.security.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountController {
@@ -20,33 +23,42 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody AccountRequest request) {
-        AccountResponse response = accountService.createAccount(request);
+    public ResponseEntity<AccountResponse> createAccount(
+            @AuthenticationPrincipal UserPrincipal principal, 
+            @Valid @RequestBody AccountRequest request) {
+        AccountResponse response = accountService.createAccount(principal.id(), request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<AccountResponse>> getAllAccounts() {
-        // Hardcoding user ID 1 CHANGE LATER
-        List<AccountResponse> response = accountService.getAllAccountsForUser(1L);
+    public ResponseEntity<List<AccountResponse>> getAllAccounts(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        List<AccountResponse> response = accountService.getAllAccountsForUser(principal.id());
         return ResponseEntity.ok(response);
     }
     /// Gets an account by id
     @GetMapping("/{id}")
-    public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long id) {
-        AccountResponse response = accountService.getAccountById(id);
+    public ResponseEntity<AccountResponse> getAccountById(
+            @PathVariable Long id, 
+            @AuthenticationPrincipal UserPrincipal principal) {
+        AccountResponse response = accountService.getAccountByIdSecure(id, principal.id());
         return ResponseEntity.ok(response);
     }
     /// Updates account
     @PutMapping("/{id}")
-    public ResponseEntity<AccountResponse> updateAccount(@PathVariable Long id, @Valid @RequestBody AccountRequest request) {
-        AccountResponse response = accountService.updateAccount(id, request);
+    public ResponseEntity<AccountResponse> updateAccount(
+            @PathVariable Long id, 
+            @AuthenticationPrincipal UserPrincipal principal, 
+            @Valid @RequestBody AccountRequest request) {
+        AccountResponse response = accountService.updateAccountSecure(id, principal.id(), request);
         return ResponseEntity.ok(response);
     }
     /// Deletes an account by its ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
-        accountService.deleteAccount(id);
+    public ResponseEntity<Void> deleteAccount(
+            @PathVariable Long id, 
+            @AuthenticationPrincipal UserPrincipal principal) {
+        accountService.deleteAccountSecure(id, principal.id());
         return ResponseEntity.noContent().build();
     }
 }

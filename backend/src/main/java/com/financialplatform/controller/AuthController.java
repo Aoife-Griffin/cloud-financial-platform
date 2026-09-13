@@ -1,0 +1,52 @@
+package com.financialplatform.controller;
+
+import com.financialplatform.dto.CreateUserRequest;
+import com.financialplatform.dto.UserResponse;
+import com.financialplatform.dto.AuthResponse;
+import com.financialplatform.model.User;
+import com.financialplatform.repository.UserRepository;
+import com.financialplatform.service.UserService;
+import com.financialplatform.security.JwtService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    private final UserService userService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+
+    public AuthController(UserService userService, UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+        this.userService = userService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody CreateUserRequest request) {
+        UserResponse response = userService.createUser(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody CreateUserRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password "));
+
+    
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new RuntimeException("Invalid email or password ");
+        }
+
+        
+        String token = jwtService.generateToken(user.getId(), user.getEmail());
+        return ResponseEntity.ok(new AuthResponse(token, user.getEmail()));
+    }
+}

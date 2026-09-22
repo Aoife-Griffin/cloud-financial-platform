@@ -1,7 +1,4 @@
-### Used geek4geeks for base https://www.geeksforgeeks.org/devops/docker-compose/
-version: '3.8'
-
-
+### Used geek4geeks for base https://geeksforgeeks.org
 services:
   financial_db:
     image: postgres:16-alpine
@@ -15,7 +12,55 @@ services:
       POSTGRES_DB: financial_db
     volumes:
       - postgres_data_v2:/var/lib/postgresql/data
+    networks:
+      - financial-network
+
+  analytics:
+    build:
+      context: ../analytics-service  
+      dockerfile: Dockerfile
+    container_name: financial-analytics
+    ports:
+      - "8000:8000"
+    networks:
+      - financial-network
+    restart: always
+
+  backend:
+    build:
+      context: ../backend        
+      dockerfile: Dockerfile
+    container_name: financial-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://financial_db:5432/financial_db
+      - SPRING_DATASOURCE_USERNAME=financial_user
+      - SPRING_DATASOURCE_PASSWORD=password123
+    depends_on:
+      - financial_db
+      - analytics
+    networks:
+      - financial-network
+    restart: always
+
+  frontend:
+    build:
+      context: ../frontend   
+      dockerfile: Dockerfile
+    container_name: financial-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - financial-network
+    restart: always
 
 volumes:
   postgres_data_v2:
     driver: local
+
+networks:
+  financial-network:
+    driver: bridge

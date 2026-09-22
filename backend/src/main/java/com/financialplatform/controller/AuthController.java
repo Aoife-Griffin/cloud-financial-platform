@@ -57,22 +57,3 @@ public class AuthController {
     }
 }
 
-@RestController
-@RequestMapping("/api")
-@Tag(name = "Transactions", description = "Transaction history management endpoints")
-public class TransactionController {
-
-    @Operation(summary = "Get user transactions", description = "Gets filtered, sorted, and paginated transaction arrays for the authenticated profile.")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Success"),
-        @ApiResponse(responseCode = "401", description = "Invalid or expired JWT credentials"),
-        @ApiResponse(responseCode = "500", description = "Internal data layer failure")
-    })
-    @GetMapping("/transactions")
-    public ResponseEntity<?> getTransactions(
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "1") int page) {
-        // Implementation
-        return ResponseEntity.ok().build();
-    }
-}

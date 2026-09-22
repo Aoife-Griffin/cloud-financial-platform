@@ -5,8 +5,8 @@ import { Dashboard } from './pages/Dashboard';
 import { Accounts } from './pages/Accounts';
 import { Transactions } from './pages/Transactions';
 import { Budgets } from './pages/Budgets';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { Layout } from './components/Layout';
+import { ProtectedRoute } from './services/ProtectedRoute';
+import { Layout } from './services/Layout';
 
 export default function App() {
   return (

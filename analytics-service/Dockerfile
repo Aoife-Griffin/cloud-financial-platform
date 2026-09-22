@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim 
 WORKDIR /app
 ### Stop Python from writing pyc files  and enable instant logging
 ENV PYTHONDONTWRITEBYTECODE=1

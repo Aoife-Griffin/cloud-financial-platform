@@ -19,10 +19,14 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 
 @Service
 public class TransactionService {
+    private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
     private final TransactionRepository transactionRepository;
 
@@ -31,6 +35,9 @@ public class TransactionService {
     }
 
     public TransactionResponse createTransaction(TransactionRequest request) {
+        MDC.put("accountId", String.valueOf(request.accountId()));
+        log.info("Attempting to create a new transaction");
+
         Transaction tx = new Transaction();
         tx.setAccountId(request.accountId());
         tx.setCategoryName(request.categoryName());
@@ -42,10 +49,18 @@ public class TransactionService {
         }
 
         Transaction saved = transactionRepository.save(tx);
+
+        /// Create transactionId for logging
+        MDC.put("transactionId", String.valueOf(saved.getId()));
+        log.info("Transaction created successfully");
+
         return mapToResponse(saved);
+    } finally {
+        MDC.clear();
     }
 
     public Page<TransactionResponse> getFilteredTransactions(String category, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+        log.info("Fetching filtered transactions for category: {}", category);
         Specification<Transaction> spec = Specification.where(TransactionSpecifications.hasCategory(category))
                 .and(TransactionSpecifications.isBetweenDates(from, to));
 
@@ -53,32 +68,58 @@ public class TransactionService {
     }
 
     public TransactionResponse getTransactionById(Long id) {
-        Transaction tx = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
-        return mapToResponse(tx);
+        try {
+            MDC.put("transactionId", String.valueOf(id));
+            Transaction tx = transactionRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+            log.info("Transaction retrieved successfully");
+            return mapToResponse(tx);
+        } finally {
+            MDC.clear();
+        }
     }
 
     /// Updates an existing transaction with new details
     public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
-        Transaction tx = transactionRepository.findById(id)
+        try {
+            MDC.put("transactionId", String.valueOf(id));
+            MDC.put("accountId", String.valueOf(request.accountId()));
+            log.info("Attempting to update transaction");
+            Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
 
-        tx.setCategoryName(request.categoryName());
-        tx.setAmount(request.amount());
-        tx.setType(request.type().toUpperCase());
-        tx.setDescription(request.description());
-        if (request.transactionDate() != null) {
-            tx.setTransactionDate(request.transactionDate());
+            tx.setCategoryName(request.categoryName());
+            tx.setAmount(request.amount());
+            tx.setType(request.type().toUpperCase());
+            tx.setDescription(request.description());
+            if (request.transactionDate() != null) {
+                tx.setTransactionDate(request.transactionDate());
         }
 
-        Transaction updated = transactionRepository.save(tx);
-        return mapToResponse(updated);
+            Transaction updated = transactionRepository.save(tx);
+            log.info("Transaction updated successfully");
+            return mapToResponse(updated);
+        } finally {
+            MDC.clear();
+        }
     }
     /// Checks if transaction exists before deleting it
     public void deleteTransaction(Long id) {
-        if (!transactionRepository.existsById(id)) {
-            throw new RuntimeException("Transaction not found with ID: " + id);
+        try {
+            MDC.put("transactionId", String.valueOf(id));
+            log.info("Attempting to delete transaction");
+
+            if (!transactionRepository.existsById(id)) {
+                log.warn("Delete aborted: Transaction ID does not exist");
+                throw new RuntimeException("Transaction not found with ID: " + id);
+        } 
+        transactionRepository.deleteById(id);
+        log.info("Transaction deleted successfully");
+
+        } finally {
+            MDC.clear();
         }
+        
         transactionRepository.deleteById(id);
     }
     /// Connects trans entity to trans response
@@ -96,6 +137,7 @@ public class TransactionService {
     }
         /// Adding a method to track spendings for a given month or year
     public MonthlySpendingResponse calculateMonthlySpendingMetrics(int year, int month) {
+        log.info("Calculating monthly spending metrics for year: {} month: {}", year, month);
         LocalDateTime startOfMonth = LocalDateTime.of(year, month, 1, 0, 0, 0);
         LocalDateTime endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1);
 

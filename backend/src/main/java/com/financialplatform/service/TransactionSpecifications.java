@@ -11,6 +11,9 @@ public class TransactionSpecifications {
             cb.equal(cb.lower(root.get("categoryName")), category.toLowerCase());
     }
 
+    public static Specification<Transaction> hasUserId(Long userId) {
+    return (root, query, cb) -> cb.equal(root.get("userId"), userId);
+}
     public static Specification<Transaction> isBetweenDates(LocalDateTime from, LocalDateTime to) {
         return (root, query, cb) -> {
             if (from == null && to == null) return null;

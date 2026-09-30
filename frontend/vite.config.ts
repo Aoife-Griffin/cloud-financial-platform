@@ -7,4 +7,13 @@ export default defineConfig({
     react(),
     tailwindcss(), 
   ],
+   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8081', // Points directly to your active Spring Boot server port
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 });

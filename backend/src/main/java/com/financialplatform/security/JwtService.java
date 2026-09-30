@@ -10,9 +10,12 @@ import javax.crypto.SecretKey;
 @Service
 public class JwtService {
 
-    /// Using secretkey for signing and verifying tokens. 
-    private static final String SECRET_STRING = "your-super-secret-secure-key-must-be-at-least-256-bits-long-cloud-financial-platform";
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET_STRING.getBytes());
+    /// Changed passcode from hardcoded to dynamic 
+    private static final String DEFAULT_SECRET = "your-super-secret-secure-key-must-be-at-least-256-bits-long-cloud-financial-platform";
+    
+    private final SecretKey key = Keys.hmacShaKeyFor(
+        System.getenv("JWT_SECRET") != null ? System.getenv("JWT_SECRET").getBytes() : DEFAULT_SECRET.getBytes()
+    );
     /// Had to look up 24 hours in milliseconds
     private static final long EXPIRATION_TIME = 86400000;
 

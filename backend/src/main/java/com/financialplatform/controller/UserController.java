@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.financialplatform.security.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
+
 
 
 @RestController
@@ -31,4 +35,11 @@ public class UserController {
         UserResponse response = userService.getUserById(id);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserPrincipal principal) {
+    UserResponse response = userService.getUserById(principal.id());
+    return ResponseEntity.ok(response);
+    }
+
 }

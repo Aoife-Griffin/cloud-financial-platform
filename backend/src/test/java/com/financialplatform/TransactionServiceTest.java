@@ -1,6 +1,6 @@
 package com.financialplatform.service;
 
-import com.financialplatform.model.Transaction;
+import com.financialplatform.dto.TransactionRequest;
 import com.financialplatform.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,10 +8,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.*;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-
 
 @ExtendWith(MockitoExtension.class)
 public class TransactionServiceTest {
@@ -25,8 +25,17 @@ public class TransactionServiceTest {
     /// Test for invalid requests
     @Test
     void shouldRejectInvalidTransaction() {
-         assertThrows(IllegalArgumentException.class, () -> {
-            transactionService.processTransaction("", -50.00, "Food");
+        TransactionRequest invalidRequest = new TransactionRequest(
+            1L,                     
+            "Food",                 
+            BigDecimal.valueOf(-50.00), 
+            "DEBIT",                
+            "",                     
+            LocalDateTime.now()     
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            transactionService.createTransaction(1L, invalidRequest);
         });
     }
 }

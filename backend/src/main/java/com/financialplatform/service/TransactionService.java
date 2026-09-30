@@ -17,7 +17,6 @@ import java.util.HashMap;
 
 import java.math.BigDecimal;
 import java.util.List;
-import org.springframework.data.jpa.domain.Specification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,44 +33,53 @@ public class TransactionService {
         this.transactionRepository = transactionRepository;
     }
 
-    public TransactionResponse createTransaction(TransactionRequest request) {
-        MDC.put("accountId", String.valueOf(request.accountId()));
-        log.info("Attempting to create a new transaction");
+    public TransactionResponse createTransaction(Long userId, TransactionRequest request) {
+        try {
+            MDC.put("accountId", String.valueOf(request.accountId()));
+            log.info("Attempting to create a new transaction");
 
-        Transaction tx = new Transaction();
-        tx.setAccountId(request.accountId());
-        tx.setCategoryName(request.categoryName());
-        tx.setAmount(request.amount());
-        tx.setType(request.type().toUpperCase());
-        tx.setDescription(request.description());
-        if (request.transactionDate() != null) {
-            tx.setTransactionDate(request.transactionDate());
+            Transaction tx = new Transaction();
+            tx.setAccountId(request.accountId());
+            tx.setUserId(userId);
+            tx.setCategoryName(request.categoryName());
+            tx.setAmount(request.amount());
+            tx.setType(request.type().toUpperCase());
+            tx.setDescription(request.description());
+            if (request.transactionDate() != null) {
+                tx.setTransactionDate(request.transactionDate());
+            }
+
+            Transaction saved = transactionRepository.save(tx);
+
+            /// Create transactionId for logging
+            MDC.put("transactionId", String.valueOf(saved.getId()));
+            log.info("Transaction created successfully");
+
+            return mapToResponse(saved);
+        } finally {
+            MDC.clear();
         }
-
-        Transaction saved = transactionRepository.save(tx);
-
-        /// Create transactionId for logging
-        MDC.put("transactionId", String.valueOf(saved.getId()));
-        log.info("Transaction created successfully");
-
-        return mapToResponse(saved);
-    } finally {
-        MDC.clear();
     }
 
-    public Page<TransactionResponse> getFilteredTransactions(String category, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+    public Page<TransactionResponse> getFilteredTransactions(Long userId, String category, LocalDateTime from, LocalDateTime to, Pageable pageable) {
         log.info("Fetching filtered transactions for category: {}", category);
-        Specification<Transaction> spec = Specification.where(TransactionSpecifications.hasCategory(category))
+        Specification<Transaction> spec = Specification.where(TransactionSpecifications.hasUserId(userId))
+                .and(TransactionSpecifications.hasCategory(category))
                 .and(TransactionSpecifications.isBetweenDates(from, to));
 
         return transactionRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
-    public TransactionResponse getTransactionById(Long id) {
+    public TransactionResponse getTransactionById(Long id, Long userId) {
         try {
             MDC.put("transactionId", String.valueOf(id));
             Transaction tx = transactionRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+                
+            if (!tx.getUserId().equals(userId)) {
+                log.error("Unauthorized data access attempt recorded for transaction ID: {}", id);
+                throw new RuntimeException("Access denied to requested transaction profile data.");
+            }
             log.info("Transaction retrieved successfully");
             return mapToResponse(tx);
         } finally {
@@ -80,13 +88,17 @@ public class TransactionService {
     }
 
     /// Updates an existing transaction with new details
-    public TransactionResponse updateTransaction(Long id, TransactionRequest request) {
+    public TransactionResponse updateTransaction(Long id, Long userId, TransactionRequest request) {
         try {
             MDC.put("transactionId", String.valueOf(id));
             MDC.put("accountId", String.valueOf(request.accountId()));
             log.info("Attempting to update transaction");
             Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+
+            if (!tx.getUserId().equals(userId)) {
+                throw new RuntimeException("Access denied to modify transaction.");
+            }
 
             tx.setCategoryName(request.categoryName());
             tx.setAmount(request.amount());
@@ -104,23 +116,25 @@ public class TransactionService {
         }
     }
     /// Checks if transaction exists before deleting it
-    public void deleteTransaction(Long id) {
+    public void deleteTransaction(Long id, Long userId) {
         try {
             MDC.put("transactionId", String.valueOf(id));
             log.info("Attempting to delete transaction");
 
-            if (!transactionRepository.existsById(id)) {
-                log.warn("Delete aborted: Transaction ID does not exist");
-                throw new RuntimeException("Transaction not found with ID: " + id);
-        } 
-        transactionRepository.deleteById(id);
+             Transaction tx = transactionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + id));
+
+            if (!tx.getUserId().equals(userId)) {
+                throw new RuntimeException("Access denied to delete transaction.");
+            }
+
+        transactionRepository.delete(tx);
         log.info("Transaction deleted successfully");
 
         } finally {
             MDC.clear();
         }
         
-        transactionRepository.deleteById(id);
     }
     /// Connects trans entity to trans response
     private TransactionResponse mapToResponse(Transaction tx) {
@@ -136,13 +150,14 @@ public class TransactionService {
         );
     }
         /// Adding a method to track spendings for a given month or year
-    public MonthlySpendingResponse calculateMonthlySpendingMetrics(int year, int month) {
-        log.info("Calculating monthly spending metrics for year: {} month: {}", year, month);
+    public MonthlySpendingResponse calculateMonthlySpendingMetrics(Long userId, int year, int month) {
+        log.info("Calculating monthly spending metrics for user: {} year: {} month: {}", userId, year, month);
         LocalDateTime startOfMonth = LocalDateTime.of(year, month, 1, 0, 0, 0);
         LocalDateTime endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1);
 
         /// Gets transactions for the time given
-        Specification<Transaction> spec = Specification.where(TransactionSpecifications.isBetweenDates(startOfMonth, endOfMonth));
+        Specification<Transaction> spec = Specification.where(TransactionSpecifications.hasUserId(userId))
+                .and(TransactionSpecifications.isBetweenDates(startOfMonth, endOfMonth));
         List<Transaction> monthlyTransactions = transactionRepository.findAll(spec);
 
         BigDecimal totalSpending = BigDecimal.ZERO;

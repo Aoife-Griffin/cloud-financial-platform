@@ -36,7 +36,19 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
-                    "/swagger-ui.html"
+                    "/swagger-ui.html",
+                    "/api/auth/**",
+                    "/api/transactions/**",
+                    "/api/users/**",
+                    "/api/categories/**",
+                    "/api/reports/**",
+                    "/api/transactions/monthly-spending/**",
+                    "/api/transactions/filter/**",
+                    "/api/transactions/**",
+                    "/actuator/health",
+                    "/actuator/metrics",
+                    "/actuator/metrics/**",
+                    "/actuator/info"
                 ).permitAll() /// Sends requests to the API endpoints
                 .anyRequest().authenticated()               /// Sets all other requests to be authenticated
             )

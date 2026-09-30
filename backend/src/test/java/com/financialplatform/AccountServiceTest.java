@@ -1,5 +1,8 @@
 package com.financialplatform.service;
 
+import com.financialplatform.dto.AccountRequest;
+import com.financialplatform.dto.AccountResponse;
+
 import com.financialplatform.model.Account;
 import com.financialplatform.repository.AccountRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +17,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+
+import java.math.BigDecimal;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -31,8 +36,9 @@ public class AccountServiceTest {
     void setUp() {
         mockAccount = new Account();
         mockAccount.setId(1L);
+        mockAccount.setUserId(1L);
         mockAccount.setName("Savings");
-        mockAccount.setBalance(5200.00);
+        mockAccount.setBalance(BigDecimal.valueOf(5200.00));;
     }
 
     /// Test to make sure account is created and saved
@@ -40,20 +46,23 @@ public class AccountServiceTest {
     void shouldCreateAccount() {
         when(accountRepository.save(any(Account.class))).thenReturn(mockAccount);
         
-        Account created = accountService.createAccount("Savings", 5200.00);
+        AccountRequest request = new AccountRequest("Savings", "123456789", "CHECKING");
+        AccountResponse response = accountService.createAccount(1L, request);
         
-        assertNotNull(created);
-        assertEquals("Savings", created.getName());
+        assertNotNull(response);
+        assertEquals("Savings", response.name());
+        assertEquals(BigDecimal.valueOf(5200.00), response.balance());
         verify(accountRepository, times(1)).save(any(Account.class));
     }
 
-    /// Test to retrieve account
+
+    /// Test to retrieve secure account by ID and verify its properties
     @Test
-    void shouldCalculateBalance() {
+    void shouldGetAccountByIdSecure() {
         when(accountRepository.findById(1L)).thenReturn(Optional.of(mockAccount));
+        AccountResponse response = accountService.getAccountByIdSecure(1L, 1L);
         
-        double balance = accountService.getBalance(1L);
-        
-        assertEquals(5200.00, balance);
+        assertNotNull(response);
+        assertEquals(BigDecimal.valueOf(5200.00), response.balance());
     }
 }

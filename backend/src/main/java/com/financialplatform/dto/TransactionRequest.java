@@ -8,6 +8,10 @@ import jakarta.validation.constraints.PastOrPresent;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PastOrPresent;
+
 public record TransactionRequest(
     @NotNull(message = "Account ID is required")
     Long accountId,

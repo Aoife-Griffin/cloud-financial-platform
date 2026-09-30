@@ -16,12 +16,13 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.financialplatform.security.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -41,8 +42,10 @@ public class TransactionController {
         @ApiResponse(responseCode = "401", description = "Invalid or expired JWT credentials")
     })
     @PostMapping
-    public ResponseEntity<TransactionResponse> createTransaction(@Valid @RequestBody TransactionRequest request) {
-        TransactionResponse response = transactionService.createTransaction(request);
+    public ResponseEntity<TransactionResponse> createTransaction(
+            @AuthenticationPrincipal UserPrincipal principal, 
+            @Valid @RequestBody TransactionRequest request) {
+        TransactionResponse response = transactionService.createTransaction(principal.id(), request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -53,19 +56,18 @@ public class TransactionController {
     })
     @GetMapping
     public ResponseEntity<Page<TransactionResponse>> getTransactions(
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        /// Convert LocalDate to LocalDateTime for filtering
         LocalDateTime fromDateTime = (from != null) ? from.atStartOfDay() : null;
         LocalDateTime toDateTime = (to != null) ? to.atTime(23, 59, 59) : null;
 
-        /// Sort transactions by showing the newest ones first
         Pageable pageable = PageRequest.of(page, size, Sort.by("transactionDate").descending());
-        Page<TransactionResponse> response = transactionService.getFilteredTransactions(category, fromDateTime, toDateTime, pageable);
+        Page<TransactionResponse> response = transactionService.getFilteredTransactions(principal.id(), category, fromDateTime, toDateTime, pageable);
         
         return ResponseEntity.ok(response);
     }
@@ -77,8 +79,10 @@ public class TransactionController {
         @ApiResponse(responseCode = "404", description = "Transaction record could not be found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable Long id) {
-        TransactionResponse response = transactionService.getTransactionById(id);
+    public ResponseEntity<TransactionResponse> getTransactionById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) { 
+        TransactionResponse response = transactionService.getTransactionById(id, principal.id());
         return ResponseEntity.ok(response);
     }
 
@@ -90,20 +94,25 @@ public class TransactionController {
         @ApiResponse(responseCode = "404", description = "Transaction record could not be found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<TransactionResponse> updateTransaction(@PathVariable Long id, @Valid @RequestBody TransactionRequest request) {
-        TransactionResponse response = transactionService.updateTransaction(id, request);
+    public ResponseEntity<TransactionResponse> updateTransaction(
+            @PathVariable Long id, 
+            @AuthenticationPrincipal UserPrincipal principal, 
+            @Valid @RequestBody TransactionRequest request) {
+        TransactionResponse response = transactionService.updateTransaction(id, principal.id(), request);
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Delete a transaction", description = "Removes a transaction record completely from the data layer registry using its unique ID identifier key.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "244", description = "Transaction removed successfully (No Content returned)"),
+        @ApiResponse(responseCode = "204", description = "Transaction removed successfully"), 
         @ApiResponse(responseCode = "401", description = "Invalid or expired JWT credentials"),
         @ApiResponse(responseCode = "404", description = "Transaction record could not be found")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
-        transactionService.deleteTransaction(id);
+    public ResponseEntity<Void> deleteTransaction(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) { 
+        transactionService.deleteTransaction(id, principal.id());
         return ResponseEntity.noContent().build();
     }
 
@@ -114,10 +123,11 @@ public class TransactionController {
     })
     @GetMapping("/analytics/monthly")
     public ResponseEntity<MonthlySpendingResponse> getMonthlyAnalytics(
+            @AuthenticationPrincipal UserPrincipal principal, 
             @RequestParam int year,
             @RequestParam int month
     ) {
-        MonthlySpendingResponse response = transactionService.calculateMonthlySpendingMetrics(year, month);
+        MonthlySpendingResponse response = transactionService.calculateMonthlySpendingMetrics(principal.id(), year, month);
         return ResponseEntity.ok(response);
     }
 }

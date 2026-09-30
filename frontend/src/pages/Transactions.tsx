@@ -1,31 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import API from '../services/api';
 
 interface Transaction {
   id: number;
-  date: string;
-  description: string;
-  category: string;
+  accountId: number;
+  categoryName: string;
   amount: number;
+  type: string;
+  description: string;
+  transactionDate: string;
 }
 
 export const Transactions = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0); /// Originally uset state 1 but set for 0 indexing
+  const [pageSize] = useState(10);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const [transactions] = useState<Transaction[]>([
-    { id: 1, date: '02/09', description: 'Tesco', category: 'Food', amount: -45 },
-    { id: 2, date: '03/09', description: 'Salary', category: 'Income', amount: 2500 },
-    { id: 3, date: '04/09', description: 'Bus', category: 'Transport', amount: -12 },
-  ]);
+  /// Get logs every time the page mutates
+  useEffect(() => {
+    fetchTransactions();
+  }, [page, categoryFilter]);
 
-  /// Filtering by what user inputs
-  const filteredData = transactions
-    .filter(t => t.description.toLowerCase().includes(search.toLowerCase()))
-    .filter(t => (categoryFilter ? t.category === categoryFilter : true))
+  const fetchTransactions = async () => {
+    try {
+      
+      const response = await API.get('/transactions', {
+        params: {
+          page: page,
+          size: pageSize,
+          category: categoryFilter || undefined
+        }
+      });
+
+      setTransactions(response.data.content);
+      setTotalPages(response.data.totalPages || 1);
+    }  catch (err) {
+      console.error('Failed to stream paginated transactional ledger matrix logs:', err);
+    }
+  };
+  const filteredData = [...transactions]
+    .filter(t => t.description?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === 'date') return b.date.localeCompare(a.date);
+      if (sortBy === 'date') {
+        return new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
+      }
       return b.amount - a.amount;
     });
 
@@ -68,11 +90,13 @@ export const Transactions = () => {
           <tbody className="divide-y divide-gray-200 bg-white">
             {filteredData.map(t => (
               <tr key={t.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.date}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(t.transactionDate).toLocaleDateString()}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.description}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.category}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {t.amount > 0 ? `+€${t.amount}` : `-€${Math.abs(t.amount)}`}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.categoryName || 'Uncategorized'}</td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === 'CREDIT' ? 'text-green-600' : 'text-red-600'}`}>
+                  {t.type === 'CREDIT' ? `+€${t.amount}` : `-€${t.amount}`}
                 </td>
               </tr>
             ))}
@@ -83,9 +107,21 @@ export const Transactions = () => {
 
       {/* setting up pagination */}
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-lg">
-        <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 border rounded disabled:opacity-50">Previous</button>
-        <span className="text-sm text-gray-650">Page {page}</span>
-        <button onClick={() => setPage(p => p + 1)} className="px-3 py-1 border rounded">Next</button>
+        <button 
+          disabled={page === 0} 
+          onClick={() => setPage(p => Math.max(0, p - 1))} 
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span className="text-sm text-gray-650">Page {page + 1} of {totalPages}</span>
+        <button 
+          disabled={page >= totalPages - 1} 
+          onClick={() => setPage(p => p + 1)} 
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Next
+        </button>
       </div>
     </div>
   );

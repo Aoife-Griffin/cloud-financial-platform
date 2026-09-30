@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: financial-analytics
     ports:
-      - "8000:8000"
+      - "8082:8080" ### Changed to 8082 for multi level evaluation
     networks:
       - financial-network
     restart: always
@@ -18,13 +18,14 @@ services:
       dockerfile: Dockerfile
     container_name: financial-backend
     ports:
-      - "8080:8080"
-        environment:
-      - DB_HOST=${DB_HOST:://amazonaws.com}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME:-financial_db}
-      - DB_USER=${DB_USER:-financial_user}
-      - DB_PASSWORD=${DB_PASSWORD:-password123}
+      - "8081:8081"
+    environment:
+      
+      - SPRING_PROFILES_ACTIVE=prod 
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - analytics
     networks:

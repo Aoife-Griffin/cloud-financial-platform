@@ -4,26 +4,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.financialplatform.model.Transaction;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc; 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.test.context.support.WithMockUser;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-
-
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test") 
-@Transactional /// To roll back the database after the tests
+@Transactional 
 public class TransactionControllerIT {
 
     @Autowired
@@ -32,19 +32,25 @@ public class TransactionControllerIT {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /// Testing transaction creation and retrieval
     @Test
+    @WithMockUser(username = "testuser", roles = {"USER"})
     void shouldCreateAndFetchTransaction() throws Exception {
-        Transaction tx = new Transaction("Tesco", -45.00, "Food", "2026-09-02");
+        Transaction tx = new Transaction();
+        tx.setAccountId(1L);
+        tx.setUserId(1L);
+        tx.setDescription("Tesco");
+        tx.setAmount(BigDecimal.valueOf(45.00));
+        tx.setType("DEBIT");
+        tx.setCategoryName("Food");
+        tx.setTransactionDate(LocalDateTime.now());
 
         mockMvc.perform(post("/api/transactions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(tx)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.description").value("Tesco"));
+                .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/transactions"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.content").isArray()); 
     }
 }

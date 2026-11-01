@@ -37,7 +37,7 @@ jobs:
           python-version: '3.12' ### Used to be 3.10 but changed for CI/CD pipeline
 
       - name: Install Python Linters
-        run: "pip install --only-binary=:all: black flake8"
+        run: "pip install --only-binary=:all: black==25.1.0 flake8==7.1.2"
 
       - name: Run Black (Formatter Check)
         run: black --check analytics-service/

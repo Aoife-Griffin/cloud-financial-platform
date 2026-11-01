@@ -1,4 +1,4 @@
-package com.financialplatform.controller;
+package com.financialplatform.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.financialplatform.model.Transaction;

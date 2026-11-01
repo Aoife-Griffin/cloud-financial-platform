@@ -142,6 +142,13 @@ jobs:
           role-to-assume: arn:aws:iam::657477597037:role/github-actions-role
           aws-region: eu-north-1
 
+      - name: Test EC2 SSH Connectivity
+        env:
+          EC2_HOST: ${{ secrets.AWS_EC2_PUBLIC_IP }}
+        run: |
+          echo "Testing connection to EC2 on port 22..."
+          nc -vz -w 10 "$EC2_HOST" 22
+
       - name: Deploy Orchestration to AWS EC2 Instance via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

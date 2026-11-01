@@ -22,8 +22,8 @@ export const Transactions = () => {
 
   /// Get logs every time the page mutates
   useEffect(() => {
-    fetchTransactions();
-  }, [page, categoryFilter]);
+  void fetchTransactions();
+}, [page, categoryFilter]);
 
   const fetchTransactions = async () => {
     try {

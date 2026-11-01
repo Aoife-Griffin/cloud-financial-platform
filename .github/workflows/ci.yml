@@ -150,7 +150,7 @@ jobs:
           nc -vz -w 10 "$EC2_HOST" 22
 
       - name: Deploy Orchestration to AWS EC2 Instance via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
         with:
           host: ${{ secrets.AWS_EC2_PUBLIC_IP }}
           username: ubuntu

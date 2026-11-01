@@ -10,12 +10,23 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(''); /// clears out previous errors
+
     try {
       const res = await API.post('/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      navigate('/dashboard');
+      const token = res.data?.token;
+
+      const jwtRegex = /^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]+$/;
+
+      if (typeof token === 'string' && jwtRegex.test(token)) {
+        localStorage.setItem('token', token);
+        navigate('/dashboard');
+      } else {
+        throw new Error('Security Error: bad authentication token.');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      /// changed to prioritise the server made error messages
+      setError(err.response?.data?.message || err.message || 'Invalid email or password');
     }
   };
 

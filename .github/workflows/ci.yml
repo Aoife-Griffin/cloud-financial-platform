@@ -137,7 +137,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials (OIDC Secure Method)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a
         with:
           role-to-assume: arn:aws:iam::657477597037:role/github-actions-role
           aws-region: eu-north-1
